@@ -182,7 +182,7 @@ const LS_ADMIN_PASS = 'admin_pass_v1';
 const DEFAULT_ADMIN_PASS = 'admin123'; 
 const LOCAL_VISITS = 'guide_local_visits_v5';
 
-/* ⬇️⬇️⬇️ تم وضع رابط Apps Script الجديد الخاص بك هنا ⬇️⬇️⬇️ */
+/* ⬇️⬇️⬇️ رابط Apps Script الخاص بك ⬇️⬇️⬇️ */
 const HARDCODED_API = 'https://script.google.com/macros/s/AKfycbyqLBP_2yIu_7-iXMw6ZE7ndjcgMMbbwFP5F-QgqfP0SmntFyc4gduEuCjQ2g58InAFJg/exec'; 
 
 let guide = JSON.parse(localStorage.getItem(LS_GUIDE) || 'null');
@@ -234,10 +234,11 @@ function refreshGuideUI() {
 
 /* ================== التاريخ ================== */
 const now = new Date();
-const todayStr = now.toISOString().slice(0,10);
+// الحصول على تاريخ اليوم بتوقيت القاهرة
+const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'Africa/Cairo' });
 const dateInput = document.getElementById('date');
 dateInput.value = todayStr;
-dateInput.setAttribute('max', todayStr); // قفل اختيار أي تاريخ في المستقبل
+dateInput.setAttribute('max', todayStr); 
 showDay();
 
 function showDay() {
@@ -278,14 +279,13 @@ function compressImage(file, maxWidth = 1024, quality = 0.7) {
   });
 }
 
-/* ================== إضافة زيارة (مع شرط إرفاق التقرير) ================== */
+/* ================== إضافة زيارة ================== */
 async function addVisit() {
   if (!guide) { alert('سجّل بياناتك أولاً'); return; }
   const org = document.getElementById('org').value.trim();
   const purpose = document.getElementById('purpose').value.trim();
   if (!org) { alert('أدخل اسم المدرسة'); return; }
 
-  // شرط إرفاق التقرير
   const fileInput = document.getElementById('files');
   if (!fileInput.files || fileInput.files.length === 0) {
     alert('⚠️ برجاء إرفاق تقرير الزيارة (صورة أو ملف PDF) قبل الحفظ.');
@@ -442,8 +442,10 @@ async function fetchVisits() {
 }
 
 function updateAdminStats() {
-  const today = new Date().toISOString().slice(0,10);
+  // تعديل توقيت مصر هنا
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Cairo' });
   const month = today.slice(0,7);
+  
   document.getElementById('aTotal').textContent = adminVisits.length;
   document.getElementById('aMonth').textContent = adminVisits.filter(v => v.date && v.date.startsWith(month)).length;
   document.getElementById('aToday').textContent = adminVisits.filter(v => v.date === today).length;
@@ -515,15 +517,12 @@ async function deleteVisitAdmin(id) {
   const apiUrl = (localStorage.getItem(LS_API) || HARDCODED_API);
   
   try {
-    // إرسال طلب الحذف للسحابة
     await fetch(apiUrl + '?id=' + id, { method: 'POST', mode: 'no-cors' });
     
-    // مسح الزيارة من القائمة الحالية
     adminVisits = adminVisits.filter(v => String(v.id) !== String(id));
     renderAdminList();
     updateAdminStats();
     
-    // مسحها من الذاكرة المحلية أيضاً
     let localVisits = JSON.parse(localStorage.getItem(LOCAL_VISITS) || '[]');
     localVisits = localVisits.filter(v => String(v.id) !== String(id));
     localStorage.setItem(LOCAL_VISITS, JSON.stringify(localVisits));
