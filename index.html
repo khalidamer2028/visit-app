@@ -64,13 +64,13 @@
   <div class="card" id="guideSetupCard">
     <h3>👤 بيانات الموجّه</h3>
     <label>الإدارة التعليمية</label>
-    <input type="text" id="guideEdu" placeholder="مثال: إدارة شرق طنطا">
+    <input type="text" id="guideEdu" placeholder="مثال: إدارة شرق الزقازيق">
 
     <label>اسم الموجّه</label>
     <input type="text" id="guideName" placeholder="اسمك">
 
     <label>الوظيفة</label>
-    <input type="text" id="guideJob" placeholder="مثال: موجه تربية نفسية">
+    <input type="text" id="guideJob" placeholder="مثال: موجه لغة عربية">
 
     <button onclick="saveGuide()">💾 حفظ البيانات</button>
   </div>
@@ -85,10 +85,10 @@
   <div class="card" id="addCard" style="display:none;">
     <h3>زيارة جديدة</h3>
     <label>اسم المدرسة</label>
-    <input type="text" id="org" placeholder="مثال: مدرسة الرافعى الثانوية">
+    <input type="text" id="org" placeholder="مثال: مدرسة النور">
 
     <label>نوع الزيارة / الغرض</label>
-    <input type="text" id="purpose" placeholder="مثال: متابعة ">
+    <input type="text" id="purpose" placeholder="مثال: متابعة تربوية">
 
     <label>التاريخ</label>
     <input type="date" id="date" onchange="showDay()">
@@ -123,7 +123,6 @@
       <div id="fetchStatus"></div>
     </div>
 
-    <!-- 🔥 قسم تغيير كلمة السر الجديد -->
     <div class="card">
       <h3>🔑 تغيير كلمة سر المدير</h3>
       <label>كلمة السر الجديدة</label>
@@ -183,8 +182,8 @@ const LS_ADMIN_PASS = 'admin_pass_v1';
 const DEFAULT_ADMIN_PASS = 'admin123'; 
 const LOCAL_VISITS = 'guide_local_visits_v5';
 
-/* ⬇️⬇️⬇️ تم وضع رابط Apps Script الخاص بك هنا ⬇️⬇️⬇️ */
-const HARDCODED_API = 'https://script.google.com/macros/s/AKfycbzPJ5DnPgiCDgUHwM3jzX916gBzbQ1oDV4Gi4NN32T0FPfQbgm5EcClUk0aQMglKWircQ/exec'; 
+/* ⬇️⬇️⬇️ تم وضع رابط Apps Script الجديد الخاص بك هنا ⬇️⬇️⬇️ */
+const HARDCODED_API = 'https://script.google.com/macros/s/AKfycbyqLBP_2yIu_7-iXMw6ZE7ndjcgMMbbwFP5F-QgqfP0SmntFyc4gduEuCjQ2g58InAFJg/exec'; 
 
 let guide = JSON.parse(localStorage.getItem(LS_GUIDE) || 'null');
 let adminVisits = [];
@@ -279,24 +278,26 @@ function compressImage(file, maxWidth = 1024, quality = 0.7) {
   });
 }
 
-/* ================== إضافة زيارة ================== */
+/* ================== إضافة زيارة (مع شرط إرفاق التقرير) ================== */
 async function addVisit() {
   if (!guide) { alert('سجّل بياناتك أولاً'); return; }
   const org = document.getElementById('org').value.trim();
   const purpose = document.getElementById('purpose').value.trim();
   if (!org) { alert('أدخل اسم المدرسة'); return; }
- 
+
+  // شرط إرفاق التقرير
   const fileInput = document.getElementById('files');
   if (!fileInput.files || fileInput.files.length === 0) {
     alert('⚠️ برجاء إرفاق تقرير الزيارة (صورة أو ملف PDF) قبل الحفظ.');
-    return; // هيوقف الحفظ هنا
+    return;
   }
+
   const btn = event.target;
   btn.disabled = true; btn.textContent = '⏳ جاري الإرسال...';
   const statusEl = document.getElementById('sendStatus');
   statusEl.className = ''; statusEl.textContent = '';
 
-  const fileList = Array.from(document.getElementById('files').files);
+  const fileList = Array.from(fileInput.files);
   const attachments = [];
 
   for (const file of fileList) {
@@ -325,28 +326,22 @@ async function addVisit() {
 
   const apiUrl = (localStorage.getItem(LS_API) || HARDCODED_API);
   
-  if (!apiUrl || apiUrl.includes('YOUR_ID')) {
-    saveLocal(visit);
+  try {
     statusEl.className = 'status info';
-    statusEl.textContent = '⚠️ لم يُضبط رابط السحابة — حُفظ محلياً فقط. اتصل بالمدير.';
-  } else {
-    try {
-      statusEl.className = 'status info';
-      statusEl.textContent = '⏳ جاري الإرسال للسحابة...';
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(visit)
-      });
-      saveLocal(visit);
-      statusEl.className = 'status ok';
-      statusEl.textContent = '✅ تم إرسال الزيارة بنجاح';
-    } catch (err) {
-      saveLocal(visit);
-      statusEl.className = 'status err';
-      statusEl.textContent = '⚠️ فشل الإرسال — حُفظت محلياً. حاول لاحقاً.';
-    }
+    statusEl.textContent = '⏳ جاري الإرسال للسحابة...';
+    await fetch(apiUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(visit)
+    });
+    saveLocal(visit);
+    statusEl.className = 'status ok';
+    statusEl.textContent = '✅ تم إرسال الزيارة بنجاح';
+  } catch (err) {
+    saveLocal(visit);
+    statusEl.className = 'status err';
+    statusEl.textContent = '⚠️ فشل الإرسال — حُفظت محلياً. حاول لاحقاً.';
   }
 
   clearForm();
@@ -403,7 +398,6 @@ function logoutAdmin() {
   document.getElementById('passStatus').textContent = '';
 }
 
-/* 🔥 الدالة الجديدة لتغيير كلمة السر */
 function changeAdminPass() {
   const newPass = document.getElementById('newAdminPass').value.trim();
   const status = document.getElementById('passStatus');
@@ -427,7 +421,6 @@ function saveApiUrl() {
 
 async function fetchVisits() {
   const apiUrl = (localStorage.getItem(LS_API) || HARDCODED_API);
-  if (!apiUrl || apiUrl.includes('YOUR_ID')) { alert('احفظ رابط Apps Script أولاً'); return; }
   const status = document.getElementById('fetchStatus');
   status.className = 'status info'; status.textContent = '⏳ جاري التحديث...';
   try {
@@ -500,6 +493,9 @@ function renderAdminList() {
               : `<a href="${a.data}" download="${esc(a.name)}" target="_blank">📄 ${esc(a.name)}</a>`)
         ).join('')}
       </div>
+      <div class="actions" style="margin-top: 10px;">
+        <button class="danger" onclick="deleteVisitAdmin('${v.id}')">🗑️ حذف الزيارة نهائياً</button>
+      </div>
     </div>
   `).join('');
 }
@@ -510,6 +506,32 @@ function resetAdminFilters() {
   document.getElementById('filterTo').value = '';
   document.getElementById('filterEdu').value = '';
   renderAdminList();
+}
+
+/* ================== دالة الحذف للمدير ================== */
+async function deleteVisitAdmin(id) {
+  if (!confirm('⚠️ هل أنت متأكد من حذف هذه الزيارة نهائياً؟ سيتم حذفها من جوجل شيت.')) return;
+  
+  const apiUrl = (localStorage.getItem(LS_API) || HARDCODED_API);
+  
+  try {
+    // إرسال طلب الحذف للسحابة
+    await fetch(apiUrl + '?id=' + id, { method: 'POST', mode: 'no-cors' });
+    
+    // مسح الزيارة من القائمة الحالية
+    adminVisits = adminVisits.filter(v => String(v.id) !== String(id));
+    renderAdminList();
+    updateAdminStats();
+    
+    // مسحها من الذاكرة المحلية أيضاً
+    let localVisits = JSON.parse(localStorage.getItem(LOCAL_VISITS) || '[]');
+    localVisits = localVisits.filter(v => String(v.id) !== String(id));
+    localStorage.setItem(LOCAL_VISITS, JSON.stringify(localVisits));
+    
+    alert('✅ تم إرسال طلب الحذف بنجاح');
+  } catch (err) {
+    alert('❌ حدث خطأ أثناء الحذف: ' + err.message);
+  }
 }
 
 /* ================== أدوات ================== */
