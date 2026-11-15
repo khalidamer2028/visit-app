@@ -235,7 +235,10 @@ function refreshGuideUI() {
 
 /* ================== التاريخ ================== */
 const now = new Date();
-document.getElementById('date').value = now.toISOString().slice(0,10);
+const todayStr = now.toISOString().slice(0,10);
+const dateInput = document.getElementById('date');
+dateInput.value = todayStr;
+dateInput.setAttribute('max', todayStr); // قفل اختيار أي تاريخ في المستقبل
 showDay();
 
 function showDay() {
