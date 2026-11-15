@@ -182,8 +182,8 @@ const LS_ADMIN_PASS = 'admin_pass_v1';
 const DEFAULT_ADMIN_PASS = 'admin123'; 
 const LOCAL_VISITS = 'guide_local_visits_v5';
 
-/* ⬇️⬇️⬇️ رابط Apps Script الخاص بك ⬇️⬇️⬇️ */
-const HARDCODED_API = 'https://script.google.com/macros/s/AKfycbyqLBP_2yIu_7-iXMw6ZE7ndjcgMMbbwFP5F-QgqfP0SmntFyc4gduEuCjQ2g58InAFJg/exec'; 
+/* ⬇️⬇️⬇️ تم وضع الرابط الجديد الخاص بك هنا ⬇️⬇️⬇️ */
+const HARDCODED_API = 'https://script.google.com/macros/s/AKfycbwIWN8l5ZetFoDhVrMVKFEEoT3M4V2fJ1PhT_l4L3P__naZwgE4mBbZrSQxvRjpMZaJSw/exec'; 
 
 let guide = JSON.parse(localStorage.getItem(LS_GUIDE) || 'null');
 let adminVisits = [];
@@ -234,7 +234,6 @@ function refreshGuideUI() {
 
 /* ================== التاريخ ================== */
 const now = new Date();
-// الحصول على تاريخ اليوم بتوقيت القاهرة
 const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'Africa/Cairo' });
 const dateInput = document.getElementById('date');
 dateInput.value = todayStr;
@@ -442,7 +441,6 @@ async function fetchVisits() {
 }
 
 function updateAdminStats() {
-  // تعديل توقيت مصر هنا
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Cairo' });
   const month = today.slice(0,7);
   
@@ -510,19 +508,27 @@ function resetAdminFilters() {
   renderAdminList();
 }
 
-/* ================== دالة الحذف للمدير ================== */
+/* ================== دالة الحذف للمدير (تم تعديلها) ================== */
 async function deleteVisitAdmin(id) {
   if (!confirm('⚠️ هل أنت متأكد من حذف هذه الزيارة نهائياً؟ سيتم حذفها من جوجل شيت.')) return;
   
   const apiUrl = (localStorage.getItem(LS_API) || HARDCODED_API);
   
   try {
-    await fetch(apiUrl + '?id=' + id, { method: 'POST', mode: 'no-cors' });
+    // إرسال الطلب بالطريقة الصحيحة (عشان السكربت يفهم إنه حذف)
+    await fetch(apiUrl, { 
+      method: 'POST', 
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ deleteId: id }) 
+    });
     
+    // مسحها من القائمة الحالية
     adminVisits = adminVisits.filter(v => String(v.id) !== String(id));
     renderAdminList();
     updateAdminStats();
     
+    // مسحها من الذاكرة المحلية
     let localVisits = JSON.parse(localStorage.getItem(LOCAL_VISITS) || '[]');
     localVisits = localVisits.filter(v => String(v.id) !== String(id));
     localStorage.setItem(LOCAL_VISITS, JSON.stringify(localVisits));
