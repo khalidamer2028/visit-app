@@ -64,13 +64,13 @@
   <div class="card" id="guideSetupCard">
     <h3>👤 بيانات الموجّه</h3>
     <label>الإدارة التعليمية</label>
-    <input type="text" id="guideEdu" placeholder="مثال: إدارة شرق الزقازيق">
+    <input type="text" id="guideEdu" placeholder="مثال: إدارة شرق طنطا">
 
     <label>اسم الموجّه</label>
     <input type="text" id="guideName" placeholder="اسمك">
 
     <label>الوظيفة</label>
-    <input type="text" id="guideJob" placeholder="مثال: موجه لغة عربية">
+    <input type="text" id="guideJob" placeholder="مثال: موجه تربية نفسية">
 
     <button onclick="saveGuide()">💾 حفظ البيانات</button>
   </div>
@@ -85,16 +85,16 @@
   <div class="card" id="addCard" style="display:none;">
     <h3>زيارة جديدة</h3>
     <label>اسم المدرسة</label>
-    <input type="text" id="org" placeholder="مثال: مدرسة النور">
+    <input type="text" id="org" placeholder="مثال: مدرسة الرافعى الثانوية">
 
     <label>نوع الزيارة / الغرض</label>
-    <input type="text" id="purpose" placeholder="مثال: متابعة تربوية">
+    <input type="text" id="purpose" placeholder="مثال: متابعة ">
 
     <label>التاريخ</label>
     <input type="date" id="date" onchange="showDay()">
     <div class="day-display" id="dayDisplay"></div>
 
-    <label>تقرير الزيارة (صورة أو PDF)</label>
+    <label>تقرير الزيارة (صورة أو PDF) <span style="color:#c0392b;">*إجباري</span></label>
     <input type="file" id="files" accept="image/*,application/pdf" multiple>
 
     <button onclick="addVisit()">💾 حفظ وإرسال الزيارة</button>
@@ -282,7 +282,12 @@ async function addVisit() {
   const org = document.getElementById('org').value.trim();
   const purpose = document.getElementById('purpose').value.trim();
   if (!org) { alert('أدخل اسم المدرسة'); return; }
-
+ 
+  const fileInput = document.getElementById('files');
+  if (!fileInput.files || fileInput.files.length === 0) {
+    alert('⚠️ برجاء إرفاق تقرير الزيارة (صورة أو ملف PDF) قبل الحفظ.');
+    return; // هيوقف الحفظ هنا
+  }
   const btn = event.target;
   btn.disabled = true; btn.textContent = '⏳ جاري الإرسال...';
   const statusEl = document.getElementById('sendStatus');
