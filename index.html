@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1e6f5c">
+<title>سجل زيارات الموجّه</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+  body { background: #f0f4f3; color: #222; padding: 15px; padding-bottom: 30px; }
+  h1 { text-align: center; color: #1e6f5c; margin-bottom: 6px; font-size: 22px; }
+  .subtitle { text-align: center; color: #666; font-size: 13px; margin-bottom: 15px; line-height: 1.6; }
+  .subtitle b { color: #1e6f5c; }
+  .card { background: #fff; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+  .card h3 { color: #1e6f5c; margin-bottom: 10px; font-size: 16px; }
+  label { display: block; margin: 10px 0 5px; font-weight: 600; color: #333; font-size: 14px; }
+  input, textarea, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; background: #fff; }
+  button { background: #1e6f5c; color: #fff; border: none; padding: 12px 18px; border-radius: 8px; font-size: 15px; cursor: pointer; margin-top: 10px; width: 100%; font-weight: 600; transition: .2s; }
+  button:hover { background: #145043; }
+  button.secondary { background: #6c757d; }
+  button.danger { background: #c0392b; }
+  button.admin { background: #2980b9; }
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px,1fr)); gap: 10px; }
+  .stat { background: linear-gradient(135deg,#1e6f5c,#2a9d8f); color: #fff; border-radius: 10px; padding: 12px; text-align: center; }
+  .stat .num { font-size: 24px; font-weight: 700; }
+  .stat .lbl { font-size: 11px; opacity: .9; margin-top: 3px; }
+  .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width:500px) { .filters { grid-template-columns: 1fr; } }
+  .visit { border-right: 4px solid #1e6f5c; background: #f8fbfa; padding: 12px; border-radius: 8px; margin-bottom: 10px; }
+  .visit h3 { font-size: 16px; color: #1e6f5c; margin-bottom: 6px; }
+  .visit p { font-size: 13px; margin: 3px 0; color: #444; }
+  .files { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .files a { font-size: 12px; background: #e3efec; padding: 4px 8px; border-radius: 6px; color: #1e6f5c; text-decoration: none; }
+  .files img { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; border: 1px solid #ccc; }
+  .empty { text-align: center; color: #999; padding: 20px; }
+  .badge { display: inline-block; background: #1e6f5c; color: #fff; padding: 2px 8px; border-radius: 10px; font-size: 11px; }
+  .actions { display: flex; gap: 6px; margin-top: 10px; }
+  .actions button { margin-top: 0; padding: 8px; font-size: 13px; }
+  .hidden { display: none; }
+  .day-display { display: none; margin-top: 8px; padding: 10px; background: #e3efec; border-radius: 8px; text-align: center; font-weight: 600; color: #1e6f5c; font-size: 14px; }
+  .day-display.show { display: block; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; }
+  .topbar button { width: auto; margin: 0; padding: 8px 14px; font-size: 13px; }
+  .status { font-size: 12px; text-align: center; padding: 6px; border-radius: 6px; margin-top: 8px; }
+  .status.ok { background: #d4edda; color: #155724; }
+  .status.err { background: #f8d7da; color: #721c24; }
+  .status.info { background: #d1ecf1; color: #0c5460; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1 style="margin:0;">📋 سجل الزيارات</h1>
+  <button class="admin" id="adminBtn" onclick="openAdmin()">🔐 مدير</button>
+</div>
+<p class="subtitle" id="guideNameLabel">—</p>
+
+<!-- ============ وضع الموجّه ============ -->
+<div id="guideMode">
+
+  <!-- بيانات الموجّه -->
+  <div class="card" id="guideSetupCard">
+    <h3>👤 بيانات الموجّه</h3>
+    <label>الإدارة التعليمية</label>
+    <input type="text" id="guideEdu" placeholder="مثال: إدارة شرق الزقازيق">
+
+    <label>اسم الموجّه</label>
+    <input type="text" id="guideName" placeholder="اسمك">
+
+    <label>الوظيفة</label>
+    <input type="text" id="guideJob" placeholder="مثال: موجه لغة عربية">
+
+    <button onclick="saveGuide()">💾 حفظ البيانات</button>
+  </div>
+
+  <div class="card hidden" id="guideSavedCard">
+    <h3>👤 بيانات الموجّه</h3>
+    <div style="font-size:13px;line-height:1.8;" id="guideInfoText"></div>
+    <button class="secondary" onclick="editGuide()">✏️ تعديل</button>
+  </div>
+
+  <!-- إضافة زيارة -->
+  <div class="card" id="addCard" style="display:none;">
+    <h3>زيارة جديدة</h3>
+    <label>اسم المدرسة</label>
+    <input type="text" id="org" placeholder="مثال: مدرسة النور">
+
+    <label>نوع الزيارة / الغرض</label>
+    <input type="text" id="purpose" placeholder="مثال: متابعة تربوية">
+
+    <label>التاريخ</label>
+    <input type="date" id="date" onchange="showDay()">
+    <div class="day-display" id="dayDisplay"></div>
+
+    <label>تقرير الزيارة (صورة أو PDF)</label>
+    <input type="file" id="files" accept="image/*,application/pdf" multiple>
+
+    <button onclick="addVisit()">💾 حفظ وإرسال الزيارة</button>
+    <div id="sendStatus"></div>
+  </div>
+
+</div>
+
+<!-- ============ وضع المدير ============ -->
+<div id="adminMode" class="hidden">
+  <div class="card">
+    <h3>🔐 لوحة المدير</h3>
+    <label>كلمة السر</label>
+    <input type="password" id="adminPass" placeholder="أدخل كلمة السر">
+    <button onclick="loginAdmin()">دخول</button>
+    <div id="loginStatus"></div>
+  </div>
+
+  <div id="adminPanel" class="hidden">
+    <div class="card">
+      <h3>⚙️ إعدادات</h3>
+      <label>رابط Apps Script (Web App URL)</label>
+      <input type="text" id="apiUrl" placeholder="https://script.google.com/macros/s/...">
+      <button class="secondary" onclick="saveApiUrl()">💾 حفظ الرابط</button>
+      <button class="secondary" onclick="fetchVisits()">🔄 تحديث الزيارات</button>
+      <div id="fetchStatus"></div>
+    </div>
+
+    <!-- 🔥 قسم تغيير كلمة السر الجديد -->
+    <div class="card">
+      <h3>🔑 تغيير كلمة سر المدير</h3>
+      <label>كلمة السر الجديدة</label>
+      <input type="password" id="newAdminPass" placeholder="أدخل كلمة السر الجديدة">
+      <button class="secondary" onclick="changeAdminPass()">🔄 تحديث كلمة السر</button>
+      <div id="passStatus"></div>
+    </div>
+
+    <div class="card">
+      <h3>📊 إحصائيات المدير</h3>
+      <div class="stats">
+        <div class="stat"><div class="num" id="aTotal">0</div><div class="lbl">إجمالي</div></div>
+        <div class="stat"><div class="num" id="aMonth">0</div><div class="lbl">هذا الشهر</div></div>
+        <div class="stat"><div class="num" id="aToday">0</div><div class="lbl">اليوم</div></div>
+        <div class="stat"><div class="num" id="aGuides">0</div><div class="lbl">موجّهون</div></div>
+        <div class="stat"><div class="num" id="aSchools">0</div><div class="lbl">مدارس</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🔍 بحث وفلترة</h3>
+      <div class="filters">
+        <div>
+          <label>بحث (اسم/مدرسة/غرض)</label>
+          <input type="text" id="searchBox" oninput="renderAdminList()" placeholder="اكتب...">
+        </div>
+        <div>
+          <label>من تاريخ</label>
+          <input type="date" id="filterFrom" onchange="renderAdminList()">
+        </div>
+        <div>
+          <label>إلى تاريخ</label>
+          <input type="date" id="filterTo" onchange="renderAdminList()">
+        </div>
+        <div>
+          <label>الإدارة</label>
+          <select id="filterEdu" onchange="renderAdminList()"><option value="">الكل</option></select>
+        </div>
+      </div>
+      <button class="secondary" onclick="resetAdminFilters()">🔄 إعادة ضبط</button>
+    </div>
+
+    <div class="card">
+      <h3>🗂️ كل الزيارات</h3>
+      <div id="adminList"></div>
+    </div>
+
+    <button class="secondary" onclick="logoutAdmin()">🚪 خروج من لوحة المدير</button>
+  </div>
+</div>
+
+<script>
+/* ================== إعدادات ================== */
+const LS_GUIDE = 'guide_profile_v5';
+const LS_API = 'api_url_v1';
+const LS_ADMIN_PASS = 'admin_pass_v1';
+const DEFAULT_ADMIN_PASS = 'admin123'; 
+const LOCAL_VISITS = 'guide_local_visits_v5';
+
+/* ⬇️⬇️⬇️ تم وضع رابط Apps Script الخاص بك هنا ⬇️⬇️⬇️ */
+const HARDCODED_API = 'https://script.google.com/macros/s/AKfycbzPJ5DnPgiCDgUHwM3jzX916gBzbQ1oDV4Gi4NN32T0FPfQbgm5EcClUk0aQMglKWircQ/exec'; 
+
+let guide = JSON.parse(localStorage.getItem(LS_GUIDE) || 'null');
+let adminVisits = [];
+let isAdmin = false;
+
+/* ================== اسم الموجّه ================== */
+function saveGuide() {
+  const edu = document.getElementById('guideEdu').value.trim();
+  const name = document.getElementById('guideName').value.trim();
+  const job = document.getElementById('guideJob').value.trim();
+  if (!edu) { alert('أدخل الإدارة التعليمية'); return; }
+  if (!name) { alert('أدخل اسم الموجّه'); return; }
+  if (!job) { alert('أدخل الوظيفة'); return; }
+  guide = { edu, name, job };
+  localStorage.setItem(LS_GUIDE, JSON.stringify(guide));
+  refreshGuideUI();
+  alert('✅ تم حفظ البيانات');
+}
+
+function editGuide() {
+  document.getElementById('guideSavedCard').classList.add('hidden');
+  document.getElementById('guideSetupCard').classList.remove('hidden');
+  document.getElementById('guideEdu').value = guide?.edu || '';
+  document.getElementById('guideName').value = guide?.name || '';
+  document.getElementById('guideJob').value = guide?.job || '';
+}
+
+function refreshGuideUI() {
+  const setup = document.getElementById('guideSetupCard');
+  const saved = document.getElementById('guideSavedCard');
+  const addCard = document.getElementById('addCard');
+  const label = document.getElementById('guideNameLabel');
+
+  if (guide) {
+    setup.classList.add('hidden');
+    saved.classList.remove('hidden');
+    addCard.style.display = 'block';
+    document.getElementById('guideInfoText').innerHTML =
+      `<b>الإدارة:</b> ${esc(guide.edu)}<br><b>الموجّه:</b> ${esc(guide.name)}<br><b>الوظيفة:</b> ${esc(guide.job)}`;
+    label.innerHTML = `${esc(guide.edu)} — <b>${esc(guide.name)}</b> (${esc(guide.job)})`;
+  } else {
+    setup.classList.remove('hidden');
+    saved.classList.add('hidden');
+    addCard.style.display = 'none';
+    label.textContent = '—';
+  }
+}
+
+/* ================== التاريخ ================== */
+const now = new Date();
+document.getElementById('date').value = now.toISOString().slice(0,10);
+showDay();
+
+function showDay() {
+  const val = document.getElementById('date').value;
+  const box = document.getElementById('dayDisplay');
+  if (!val) { box.classList.remove('show'); return; }
+  box.textContent = 'اليوم: ' + getDayName(val);
+  box.classList.add('show');
+}
+function getDayName(dateStr) {
+  if (!dateStr) return '';
+  const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  const d = new Date(dateStr + 'T12:00:00');
+  return days[d.getDay()];
+}
+
+/* ================== ضغط الصور ================== */
+function compressImage(file, maxWidth = 1024, quality = 0.7) {
+  return new Promise(resolve => {
+    if (!file.type.startsWith('image/')) return resolve(null);
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = e => {
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxWidth) {
+          height = Math.round(height * maxWidth / width);
+          width = maxWidth;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ================== إضافة زيارة ================== */
+async function addVisit() {
+  if (!guide) { alert('سجّل بياناتك أولاً'); return; }
+  const org = document.getElementById('org').value.trim();
+  const purpose = document.getElementById('purpose').value.trim();
+  if (!org) { alert('أدخل اسم المدرسة'); return; }
+
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = '⏳ جاري الإرسال...';
+  const statusEl = document.getElementById('sendStatus');
+  statusEl.className = ''; statusEl.textContent = '';
+
+  const fileList = Array.from(document.getElementById('files').files);
+  const attachments = [];
+
+  for (const file of fileList) {
+    if (file.type.startsWith('image/')) {
+      const data = await compressImage(file);
+      if (data) attachments.push({ name: file.name, type: 'image/jpeg', data });
+    } else {
+      const data = await new Promise(res => {
+        const r = new FileReader();
+        r.onload = e => res(e.target.result);
+        r.readAsDataURL(file);
+      });
+      attachments.push({ name: file.name, type: file.type, data });
+    }
+  }
+
+  const dateVal = document.getElementById('date').value;
+  const visit = {
+    id: Date.now(),
+    edu: guide.edu, name: guide.name, job: guide.job,
+    org, purpose,
+    date: dateVal,
+    day: getDayName(dateVal),
+    attachments
+  };
+
+  const apiUrl = (localStorage.getItem(LS_API) || HARDCODED_API);
+  
+  if (!apiUrl || apiUrl.includes('YOUR_ID')) {
+    saveLocal(visit);
+    statusEl.className = 'status info';
+    statusEl.textContent = '⚠️ لم يُضبط رابط السحابة — حُفظ محلياً فقط. اتصل بالمدير.';
+  } else {
+    try {
+      statusEl.className = 'status info';
+      statusEl.textContent = '⏳ جاري الإرسال للسحابة...';
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(visit)
+      });
+      saveLocal(visit);
+      statusEl.className = 'status ok';
+      statusEl.textContent = '✅ تم إرسال الزيارة بنجاح';
+    } catch (err) {
+      saveLocal(visit);
+      statusEl.className = 'status err';
+      statusEl.textContent = '⚠️ فشل الإرسال — حُفظت محلياً. حاول لاحقاً.';
+    }
+  }
+
+  clearForm();
+  btn.disabled = false; btn.textContent = '💾 حفظ وإرسال الزيارة';
+}
+
+function saveLocal(v) {
+  const arr = JSON.parse(localStorage.getItem(LOCAL_VISITS) || '[]');
+  arr.unshift(v);
+  localStorage.setItem(LOCAL_VISITS, JSON.stringify(arr));
+}
+
+function clearForm() {
+  ['org','purpose'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('files').value = '';
+}
+
+/* ================== لوحة المدير ================== */
+function openAdmin() {
+  document.getElementById('guideMode').classList.add('hidden');
+  document.getElementById('adminMode').classList.remove('hidden');
+  document.getElementById('adminBtn').textContent = '👤 وضع الموجّه';
+  document.getElementById('adminBtn').onclick = closeAdmin;
+  document.getElementById('apiUrl').value = localStorage.getItem(LS_API) || '';
+}
+
+function closeAdmin() {
+  document.getElementById('adminMode').classList.add('hidden');
+  document.getElementById('guideMode').classList.remove('hidden');
+  document.getElementById('adminBtn').textContent = '🔐 مدير';
+  document.getElementById('adminBtn').onclick = openAdmin;
+}
+
+function loginAdmin() {
+  const stored = localStorage.getItem(LS_ADMIN_PASS) || DEFAULT_ADMIN_PASS;
+  const input = document.getElementById('adminPass').value;
+  const status = document.getElementById('loginStatus');
+  if (input === stored) {
+    isAdmin = true;
+    document.getElementById('adminPanel').classList.remove('hidden');
+    status.className = 'status ok'; status.textContent = '✅ تم الدخول';
+    if (localStorage.getItem(LS_API) || HARDCODED_API) fetchVisits();
+  } else {
+    status.className = 'status err'; status.textContent = '❌ كلمة سر خاطئة';
+  }
+}
+
+function logoutAdmin() {
+  isAdmin = false;
+  document.getElementById('adminPanel').classList.add('hidden');
+  document.getElementById('adminPass').value = '';
+  document.getElementById('loginStatus').textContent = '';
+  document.getElementById('newAdminPass').value = '';
+  document.getElementById('passStatus').textContent = '';
+}
+
+/* 🔥 الدالة الجديدة لتغيير كلمة السر */
+function changeAdminPass() {
+  const newPass = document.getElementById('newAdminPass').value.trim();
+  const status = document.getElementById('passStatus');
+  if (newPass.length < 4) {
+    status.className = 'status err';
+    status.textContent = '❌ كلمة السر يجب أن تكون 4 أحرف على الأقل';
+    return;
+  }
+  localStorage.setItem(LS_ADMIN_PASS, newPass);
+  status.className = 'status ok';
+  status.textContent = '✅ تم تحديث كلمة السر بنجاح';
+  document.getElementById('newAdminPass').value = '';
+}
+
+function saveApiUrl() {
+  const url = document.getElementById('apiUrl').value.trim();
+  if (!url.startsWith('https://script.google.com')) { alert('رابط غير صالح'); return; }
+  localStorage.setItem(LS_API, url);
+  alert('✅ تم حفظ الرابط');
+}
+
+async function fetchVisits() {
+  const apiUrl = (localStorage.getItem(LS_API) || HARDCODED_API);
+  if (!apiUrl || apiUrl.includes('YOUR_ID')) { alert('احفظ رابط Apps Script أولاً'); return; }
+  const status = document.getElementById('fetchStatus');
+  status.className = 'status info'; status.textContent = '⏳ جاري التحديث...';
+  try {
+    const res = await fetch(apiUrl + '?t=' + Date.now());
+    const data = await res.json();
+    if (data.ok) {
+      adminVisits = data.visits || [];
+      renderAdminList();
+      updateAdminStats();
+      status.className = 'status ok';
+      status.textContent = '✅ تم تحميل ' + adminVisits.length + ' زيارة';
+    } else {
+      throw new Error(data.error || 'خطأ');
+    }
+  } catch (err) {
+    status.className = 'status err';
+    status.textContent = '❌ فشل التحميل: ' + err.message;
+  }
+}
+
+function updateAdminStats() {
+  const today = new Date().toISOString().slice(0,10);
+  const month = today.slice(0,7);
+  document.getElementById('aTotal').textContent = adminVisits.length;
+  document.getElementById('aMonth').textContent = adminVisits.filter(v => v.date && v.date.startsWith(month)).length;
+  document.getElementById('aToday').textContent = adminVisits.filter(v => v.date === today).length;
+  document.getElementById('aGuides').textContent = new Set(adminVisits.map(v => v.name)).size;
+  document.getElementById('aSchools').textContent = new Set(adminVisits.map(v => v.org)).size;
+
+  const edus = [...new Set(adminVisits.map(v => v.edu).filter(Boolean))];
+  const sel = document.getElementById('filterEdu');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">الكل</option>' + edus.map(e => `<option value="${esc(e)}">${esc(e)}</option>`).join('');
+  sel.value = current;
+}
+
+function getAdminFiltered() {
+  const q = document.getElementById('searchBox').value.trim().toLowerCase();
+  const from = document.getElementById('filterFrom').value;
+  const to = document.getElementById('filterTo').value;
+  const edu = document.getElementById('filterEdu').value;
+  return adminVisits.filter(v => {
+    const hay = `${v.name} ${v.org} ${v.purpose}`.toLowerCase();
+    if (q && !hay.includes(q)) return false;
+    if (from && v.date < from) return false;
+    if (to && v.date > to) return false;
+    if (edu && v.edu !== edu) return false;
+    return true;
+  });
+}
+
+function renderAdminList() {
+  const filtered = getAdminFiltered();
+  const list = document.getElementById('adminList');
+  if (filtered.length === 0) {
+    list.innerHTML = '<p class="empty">لا توجد زيارات</p>';
+    return;
+  }
+  list.innerHTML = filtered.map(v => `
+    <div class="visit">
+      <h3>${esc(v.org)} <span class="badge">${v.date || '-'} ${v.day ? '— '+v.day : ''}</span></h3>
+      <p><b>الإدارة:</b> ${esc(v.edu)}</p>
+      <p><b>الموجّه:</b> ${esc(v.name)} — ${esc(v.job)}</p>
+      <p><b>نوع الزيارة:</b> ${esc(v.purpose)}</p>
+      <div class="files">
+        ${(v.attachments||[]).map(a => a.isLink
+          ? `<a href="${a.data}" target="_blank">📎 ${esc(a.name)}</a>`
+          : (a.type.startsWith('image/')
+              ? `<a href="${a.data}" target="_blank"><img src="${a.data}"></a>`
+              : `<a href="${a.data}" download="${esc(a.name)}" target="_blank">📄 ${esc(a.name)}</a>`)
+        ).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function resetAdminFilters() {
+  document.getElementById('searchBox').value = '';
+  document.getElementById('filterFrom').value = '';
+  document.getElementById('filterTo').value = '';
+  document.getElementById('filterEdu').value = '';
+  renderAdminList();
+}
+
+/* ================== أدوات ================== */
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ================== بدء ================== */
+refreshGuideUI();
+</script>
+</body>
+</html>
